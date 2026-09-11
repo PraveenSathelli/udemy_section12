@@ -15,11 +15,14 @@ import { map } from 'rxjs';
 })
 export class AvailablePlacesComponent implements OnInit {
   places = signal<Place[] | undefined>(undefined);
+  isFetching = signal(false);
+  error = signal('');
 
   private httpClient = inject(HttpClient);
   private destroyRef = inject(DestroyRef);
 
   ngOnInit() {
+    this.isFetching.set(true);
     const subscribtion = this.httpClient.get<{ places: Place[] }>('http://localhost:3000/places').pipe(
       map((response) => {
         return response.places;
@@ -28,10 +31,12 @@ export class AvailablePlacesComponent implements OnInit {
       next: (data) => {
         console.log(data)
         this.places.set(data)
-      }, error(err) {
-
-      }, complete() {
-
+      }, error: (err) => {
+        console.error(err.message)
+        this.error.set("SOmething went wrong..")
+      }, complete: () => {
+        //we can use set but just want to check this :) 
+        this.isFetching.update((oldValue) => oldValue ? false : true);
       },
     });
 
