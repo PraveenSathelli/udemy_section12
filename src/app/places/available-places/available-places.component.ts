@@ -5,6 +5,7 @@ import { PlacesComponent } from '../places.component';
 import { PlacesContainerComponent } from '../places-container/places-container.component';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, throwError } from 'rxjs';
+import { PlacesService } from '../places.service';
 
 @Component({
   selector: 'app-available-places',
@@ -17,23 +18,13 @@ export class AvailablePlacesComponent implements OnInit {
   places = signal<Place[] | undefined>(undefined);
   isFetching = signal(false);
   error = signal('');
-
+  private placesService = inject(PlacesService);
   private httpClient = inject(HttpClient);
   private destroyRef = inject(DestroyRef);
 
   ngOnInit() {
     this.isFetching.set(true);
-    const subscribtion = this.httpClient.get<{ places: Place[] }>('http://localhost:3000/places').pipe(
-      map((response) => {
-        return response.places;
-      }),
-      catchError((error) => {
-        console.log("error: " + error);
-        return throwError(() => {
-          new Error("error from places");
-        })
-      })
-    ).subscribe({
+    const subscribtion = this.placesService.loadAvailablePlaces().subscribe({
       next: (data) => {
         console.log(data)
         this.places.set(data)
@@ -51,13 +42,16 @@ export class AvailablePlacesComponent implements OnInit {
   }
 
   onSelectPlace(selectPlace: Place) {
-    this.httpClient.put('http://localhost:3000/user-places', {
-      placeId: selectPlace.id
-    }).subscribe({
+    const subscribtion = this.placesService.addPlaceToUserPlaces(selectPlace.id).subscribe({
       next: (value) => {
         console.log(value)
       },
     });
+
+    this.destroyRef.onDestroy(() => {
+      subscribtion.unsubscribe();
+    });
+
 
   }
 }

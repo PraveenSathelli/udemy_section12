@@ -5,6 +5,7 @@ import { PlacesComponent } from '../places.component';
 import { Place } from '../place.model';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map, throwError } from 'rxjs';
+import { PlacesService } from '../places.service';
 
 @Component({
   selector: 'app-user-places',
@@ -14,48 +15,29 @@ import { catchError, map, throwError } from 'rxjs';
   imports: [PlacesContainerComponent, PlacesComponent],
 })
 export class UserPlacesComponent implements OnInit {
-    places = signal<Place[] | undefined>(undefined);
-    isFetching = signal(false);
-    error = signal('');
-  
-    private httpClient = inject(HttpClient);
-    private destroyRef = inject(DestroyRef);
+  places = signal<Place[] | undefined>(undefined);
+  isFetching = signal(false);
+  error = signal('');
+
+  private destroyRef = inject(DestroyRef);
+  private placeService = inject(PlacesService);
   ngOnInit() {
-      this.isFetching.set(true);
-      const subscribtion = this.httpClient.get<{ places: Place[] }>('http://localhost:3000/user-places').pipe(
-        map((response) => {
-          return response.places;
-        }),
-        catchError((error) => {
-          console.log("error: " + error);
-          return throwError(() => {
-            new Error("error from places");
-          })
-        })
-      ).subscribe({
-        next: (data) => {
-          console.log(data)
-          this.places.set(data)
-        }, error: (err: Error) => {
-          this.error.set(err.message);
-        }, complete: () => {
-          //we can use set but just want to check this :) 
-          this.isFetching.update((oldValue) => oldValue ? false : true);
-        },
-      });
-  
-      this.destroyRef.onDestroy(() => {
-        subscribtion.unsubscribe();
-      });
-    }
-      onSelectPlace(selectPlace: Place) {
-    this.httpClient.put('http://localhost:3000/user-places', {
-      placeId: selectPlace.id
-    }).subscribe({
-      next: (value) => {
-        console.log(value)
+    this.isFetching.set(true);
+    const subscribtion = this.placeService.loadUserPlaces().subscribe({
+      next: (data) => {
+        console.log(data)
+        this.places.set(data)
+      }, error: (err: Error) => {
+        this.error.set(err.message);
+      }, complete: () => {
+        //we can use set but just want to check this :) 
+        this.isFetching.update((oldValue) => oldValue ? false : true);
       },
     });
 
+    this.destroyRef.onDestroy(() => {
+      subscribtion.unsubscribe();
+    });
   }
+
 }
