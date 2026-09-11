@@ -15,19 +15,17 @@ import { PlacesService } from '../places.service';
   imports: [PlacesContainerComponent, PlacesComponent],
 })
 export class UserPlacesComponent implements OnInit {
-  places = signal<Place[] | undefined>(undefined);
   isFetching = signal(false);
   error = signal('');
 
   private destroyRef = inject(DestroyRef);
   private placeService = inject(PlacesService);
+  places = this.placeService.loadedUserPlaces;
+
   ngOnInit() {
     this.isFetching.set(true);
     const subscribtion = this.placeService.loadUserPlaces().subscribe({
-      next: (data) => {
-        console.log(data)
-        this.places.set(data)
-      }, error: (err: Error) => {
+      error: (err: Error) => {
         this.error.set(err.message);
       }, complete: () => {
         //we can use set but just want to check this :) 

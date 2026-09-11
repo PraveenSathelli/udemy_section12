@@ -2,7 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 
 import { Place } from './place.model';
 import { HttpClient } from '@angular/common/http';
-import { catchError, map, throwError } from 'rxjs';
+import { catchError, map, tap, throwError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -20,12 +20,20 @@ export class PlacesService {
 
   loadUserPlaces() {
     return this.fetchPlaces('http://localhost:3000/user-places', 'Something went wrong in user places..');
-   }
+  }
 
-  addPlaceToUserPlaces(placeId: string) {
+  addPlaceToUserPlaces(place: Place) {
+    this.userPlaces.update(previousPlace => {
+    return  [...previousPlace,place]
+    })
+    // we can have catch error for identifying the error before processing the request
     return this.httpClient.put('http://localhost:3000/user-places', {
-      placeId
-    });
+      placeId : place.id
+    }).pipe(
+      catchError(() =>  throwError( () =>{
+
+      }))
+    );
   }
 
   removeUserPlace(place: Place) { }
@@ -34,6 +42,11 @@ export class PlacesService {
     return this.httpClient.get<{ places: Place[] }>(url).pipe(
       map((response) => {
         return response.places;
+      }),
+      tap({
+        next: (places) => {
+          this.userPlaces.set(places)
+        }
       }),
       catchError((error) => {
         console.log("error: " + error);
